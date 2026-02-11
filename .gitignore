@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.js.map
+.env
+.env.local
+*.tsbuildinfo
+demo/malicious-server/node_modules/
+demo/malicious-server/dist/
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl

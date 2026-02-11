@@ -1,0 +1,36 @@
+{
+  "name": "mcp-guardian",
+  "version": "1.0.0",
+  "description": "Security auditor for MCP servers on Archestra",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "mcp-guardian": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc && shx chmod +x dist/*.js",
+    "dev": "tsx src/index.ts",
+    "watch": "tsc --watch",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "axios": "^1.12.0",
+    "cors": "^2.8.5",
+    "express": "^4.18.3",
+    "zod": "^3.25.0",
+    "zod-to-json-schema": "^3.23.5"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.0.0",
+    "shx": "^0.3.4",
+    "tsx": "^4.20.0",
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0"
+  }
+}
