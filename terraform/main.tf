@@ -1,88 +1,197 @@
 terraform {
   required_providers {
     archestra = {
-      source = "archestra/archestra"
+      source = "archestra-ai/archestra"
     }
   }
 }
 
 provider "archestra" {
-  # Uses ARCHESTRA_API_URL and ARCHESTRA_API_TOKEN env vars
+  # Set via env vars:
+  #   ARCHESTRA_API_URL  (e.g. http://localhost:9000)
+  #   ARCHESTRA_API_KEY  (from Archestra Settings → API Keys)
 }
 
-# Register Guardian in private MCP catalog
+# ─── Variables ───────────────────────────────────────────────────────────────
+
+variable "guardian_docker_image" {
+  description = "Docker image for MCP Guardian"
+  type        = string
+  default     = "" # empty = use Archestra base image + command
+}
+
+variable "malicious_demo_docker_image" {
+  description = "Docker image for malicious demo server"
+  type        = string
+  default     = "" # empty = use Archestra base image + command
+}
+
+# ─── MCP Guardian ────────────────────────────────────────────────────────────
+
 resource "archestra_mcp_registry_catalog_item" "guardian" {
   name        = "mcp-guardian"
-  description = "Security auditor for MCP servers - scans, tests, and auto-generates security policies"
-  docs_url    = "https://github.com/yourrepo/mcp-guardian"
+  description = "Security auditor for MCP servers — scans vulnerabilities, generates policies, computes trust scores"
+  docs_url    = "https://github.com/aryan877/mcp-guardian"
 
   local_config = {
-    command   = "node"
-    arguments = ["dist/index.js"]
+    command        = "node"
+    arguments      = ["dist/index.js"]
+    transport_type = "streamable-http"
+    http_port      = 8080
+    http_path      = "/mcp"
+
     environment = {
-      ARCHESTRA_API_URL = "http://localhost:9000"
+      TRANSPORT         = "sse"
+      PORT              = "8080"
+      ARCHESTRA_API_URL = "http://archestra-platform:9000"
     }
   }
 }
 
-# Install Guardian as an MCP server
 resource "archestra_mcp_server_installation" "guardian" {
-  name          = "guardian"
+  name          = "mcp-guardian"
   mcp_server_id = archestra_mcp_registry_catalog_item.guardian.id
 }
 
-# Create a profile/agent for Guardian
-resource "archestra_profile" "guardian_agent" {
-  name        = "Guardian Security Agent"
-  description = "AI security agent powered by MCP Guardian - audits and secures MCP servers"
-  model       = "gpt-4o"
-
-  tools = [
-    archestra_mcp_server_installation.guardian.id
-  ]
-}
-
-# Set cost limits for Guardian's LLM usage
-resource "archestra_limit" "guardian_cost" {
-  entity_id   = archestra_profile.guardian_agent.id
-  entity_type = "profile"
-  limit_type  = "token_cost"
-  limit_value = 100000
-  model       = ["gpt-4o", "gpt-4o-mini"]
-}
-
-# Security team with full access
-resource "archestra_team" "security" {
-  name        = "Security Team"
-  description = "Team with full Guardian access for security auditing"
-}
-
-# Use cheaper model for simple scans
-resource "archestra_optimization_rule" "guardian_optimization" {
-  entity_type  = "profile"
-  entity_id    = archestra_profile.guardian_agent.id
-  llm_provider = "openai"
-  target_model = "gpt-4o-mini"
-  enabled      = true
-
-  conditions = [
-    { max_length = 500 }
-  ]
-}
-
-# --- Demo: Install malicious server for demo ---
+# ─── Malicious Demo Server ──────────────────────────────────────────────────
 
 resource "archestra_mcp_registry_catalog_item" "malicious_demo" {
-  name        = "malicious-demo-server"
-  description = "DEMO ONLY - Intentionally vulnerable MCP server for Guardian demo"
+  name        = "malicious-demo"
+  description = "DEMO ONLY — Intentionally vulnerable MCP server with 7 dangerous tools for Guardian demo"
 
   local_config = {
-    command   = "node"
-    arguments = ["demo/malicious-server/dist/index.js"]
+    command        = "npx"
+    arguments      = ["tsx", "index.ts"]
+    transport_type = "streamable-http"
+    http_port      = 8081
+    http_path      = "/mcp"
+
+    environment = {
+      TRANSPORT = "sse"
+      PORT      = "8081"
+    }
   }
 }
 
 resource "archestra_mcp_server_installation" "malicious_demo" {
   name          = "malicious-demo"
   mcp_server_id = archestra_mcp_registry_catalog_item.malicious_demo.id
+}
+
+# ─── Security Scanner Profile ───────────────────────────────────────────────
+
+resource "archestra_profile" "guardian_agent" {
+  name = "Guardian Security Agent"
+
+  labels = [
+    {
+      key   = "purpose"
+      value = "security-auditing"
+    },
+    {
+      key   = "hackathon"
+      value = "2-fast-2-mcp"
+    }
+  ]
+}
+
+# ─── Assign Guardian tools to profile ────────────────────────────────────────
+
+# Look up each Guardian tool by name from the installed server
+data "archestra_mcp_server_tool" "scan_server" {
+  mcp_server_id = archestra_mcp_server_installation.guardian.id
+  name          = "mcp-guardian__scan_server"
+  depends_on    = [archestra_mcp_server_installation.guardian]
+}
+
+data "archestra_mcp_server_tool" "test_server" {
+  mcp_server_id = archestra_mcp_server_installation.guardian.id
+  name          = "mcp-guardian__test_server"
+  depends_on    = [archestra_mcp_server_installation.guardian]
+}
+
+data "archestra_mcp_server_tool" "generate_policy" {
+  mcp_server_id = archestra_mcp_server_installation.guardian.id
+  name          = "mcp-guardian__generate_policy"
+  depends_on    = [archestra_mcp_server_installation.guardian]
+}
+
+data "archestra_mcp_server_tool" "trust_score" {
+  mcp_server_id = archestra_mcp_server_installation.guardian.id
+  name          = "mcp-guardian__trust_score"
+  depends_on    = [archestra_mcp_server_installation.guardian]
+}
+
+data "archestra_mcp_server_tool" "monitor" {
+  mcp_server_id = archestra_mcp_server_installation.guardian.id
+  name          = "mcp-guardian__monitor"
+  depends_on    = [archestra_mcp_server_installation.guardian]
+}
+
+data "archestra_mcp_server_tool" "audit_report" {
+  mcp_server_id = archestra_mcp_server_installation.guardian.id
+  name          = "mcp-guardian__audit_report"
+  depends_on    = [archestra_mcp_server_installation.guardian]
+}
+
+# Assign each tool to the profile
+resource "archestra_profile_tool" "scan_server" {
+  profile_id                                 = archestra_profile.guardian_agent.id
+  tool_id                                    = data.archestra_mcp_server_tool.scan_server.id
+  credential_source_mcp_server_id            = archestra_mcp_server_installation.guardian.id
+  execution_source_mcp_server_id             = archestra_mcp_server_installation.guardian.id
+  allow_usage_when_untrusted_data_is_present = true
+  tool_result_treatment                      = "trusted"
+}
+
+resource "archestra_profile_tool" "test_server" {
+  profile_id                                 = archestra_profile.guardian_agent.id
+  tool_id                                    = data.archestra_mcp_server_tool.test_server.id
+  credential_source_mcp_server_id            = archestra_mcp_server_installation.guardian.id
+  execution_source_mcp_server_id             = archestra_mcp_server_installation.guardian.id
+  allow_usage_when_untrusted_data_is_present = true
+  tool_result_treatment                      = "trusted"
+}
+
+resource "archestra_profile_tool" "generate_policy" {
+  profile_id                                 = archestra_profile.guardian_agent.id
+  tool_id                                    = data.archestra_mcp_server_tool.generate_policy.id
+  credential_source_mcp_server_id            = archestra_mcp_server_installation.guardian.id
+  execution_source_mcp_server_id             = archestra_mcp_server_installation.guardian.id
+  allow_usage_when_untrusted_data_is_present = true
+  tool_result_treatment                      = "trusted"
+}
+
+resource "archestra_profile_tool" "trust_score" {
+  profile_id                                 = archestra_profile.guardian_agent.id
+  tool_id                                    = data.archestra_mcp_server_tool.trust_score.id
+  credential_source_mcp_server_id            = archestra_mcp_server_installation.guardian.id
+  execution_source_mcp_server_id             = archestra_mcp_server_installation.guardian.id
+  allow_usage_when_untrusted_data_is_present = true
+  tool_result_treatment                      = "trusted"
+}
+
+resource "archestra_profile_tool" "monitor" {
+  profile_id                                 = archestra_profile.guardian_agent.id
+  tool_id                                    = data.archestra_mcp_server_tool.monitor.id
+  credential_source_mcp_server_id            = archestra_mcp_server_installation.guardian.id
+  execution_source_mcp_server_id             = archestra_mcp_server_installation.guardian.id
+  allow_usage_when_untrusted_data_is_present = true
+  tool_result_treatment                      = "trusted"
+}
+
+resource "archestra_profile_tool" "audit_report" {
+  profile_id                                 = archestra_profile.guardian_agent.id
+  tool_id                                    = data.archestra_mcp_server_tool.audit_report.id
+  credential_source_mcp_server_id            = archestra_mcp_server_installation.guardian.id
+  execution_source_mcp_server_id             = archestra_mcp_server_installation.guardian.id
+  allow_usage_when_untrusted_data_is_present = true
+  tool_result_treatment                      = "trusted"
+}
+
+# ─── Optional: Team & Limits ────────────────────────────────────────────────
+
+resource "archestra_team" "security" {
+  name        = "Security Team"
+  description = "Team with full Guardian access for security auditing"
 }
