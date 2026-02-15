@@ -65,7 +65,7 @@ export const TrustScoreResultSchema = z.object({
     inputValidation: z.number().min(0).max(100),
     permissionScope: z.number().min(0).max(100),
     dataHandling: z.number().min(0).max(100),
-    errorHandling: z.number().min(0).max(100),
+    toolIntegrity: z.number().min(0).max(100),
     policyCompliance: z.number().min(0).max(100),
   }),
   grade: z.enum(["A+", "A", "B", "C", "D", "F"]),

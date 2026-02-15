@@ -1,6 +1,10 @@
 import type { Vulnerability } from "../schemas/outputs.js";
 import type { TrustScoreResult } from "../schemas/outputs.js";
-import type { McpTool, ToolInvocationPolicy, TrustedDataPolicy } from "../archestra/types.js";
+import type {
+  McpTool,
+  ToolInvocationPolicy,
+  TrustedDataPolicy,
+} from "../archestra/types.js";
 
 interface ScoringContext {
   tools: McpTool[];
@@ -9,27 +13,18 @@ interface ScoringContext {
   trustedDataPolicies: TrustedDataPolicy[];
 }
 
+// ─── Dimension Scorers ──────────────────────────────────────────────────────
+
 function scoreToolDescriptionSafety(ctx: ScoringContext): number {
   let score = 100;
   const descVulns = ctx.vulnerabilities.filter(
     (v) =>
       v.category === "Prompt Injection" ||
-      v.category === "Prompt Injection (LLM-detected)"
+      v.category === "Prompt Injection (LLM-detected)" ||
+      v.category === "ANSI/Steganography Attack"
   );
   for (const v of descVulns) {
-    switch (v.severity) {
-      case "critical":
-        score -= 40;
-        break;
-      case "high":
-        score -= 25;
-        break;
-      case "medium":
-        score -= 15;
-        break;
-      default:
-        score -= 5;
-    }
+    score -= v.severity === "critical" ? 40 : v.severity === "high" ? 25 : 15;
   }
   return Math.max(0, score);
 }
@@ -39,18 +34,16 @@ function scoreInputValidation(ctx: ScoringContext): number {
   const validationVulns = ctx.vulnerabilities.filter(
     (v) => v.category === "Missing Input Validation"
   );
-  const deduction = validationVulns.length * 10;
-  score -= Math.min(deduction, 60);
+  score -= Math.min(validationVulns.length * 10, 60);
 
-  // Bonus: tools that have well-defined schemas
-  const toolsWithSchemas = ctx.tools.filter(
-    (t) =>
-      t.inputSchema?.properties &&
-      Object.keys(t.inputSchema.properties as object).length > 0
-  );
+  // Bonus for tools with well-defined schemas
   if (ctx.tools.length > 0) {
-    const ratio = toolsWithSchemas.length / ctx.tools.length;
-    if (ratio === 1) score = Math.min(score + 10, 100);
+    const withSchemas = ctx.tools.filter(
+      (t) =>
+        t.inputSchema?.properties &&
+        Object.keys(t.inputSchema.properties as object).length > 0
+    );
+    if (withSchemas.length === ctx.tools.length) score = Math.min(score + 10, 100);
   }
 
   return Math.max(0, score);
@@ -61,19 +54,11 @@ function scorePermissionScope(ctx: ScoringContext): number {
   const permVulns = ctx.vulnerabilities.filter(
     (v) =>
       v.category === "Excessive Permissions" ||
-      v.category === "Command Injection"
+      v.category === "Command Injection" ||
+      v.category === "Path Traversal"
   );
   for (const v of permVulns) {
-    switch (v.severity) {
-      case "critical":
-        score -= 35;
-        break;
-      case "high":
-        score -= 20;
-        break;
-      default:
-        score -= 10;
-    }
+    score -= v.severity === "critical" ? 35 : v.severity === "high" ? 20 : 10;
   }
   return Math.max(0, score);
 }
@@ -83,32 +68,24 @@ function scoreDataHandling(ctx: ScoringContext): number {
   const dataVulns = ctx.vulnerabilities.filter(
     (v) =>
       v.category === "Data Exfiltration Risk" ||
-      v.category === "PII Exposure"
+      v.category === "PII Exposure" ||
+      v.category === "Lethal Trifecta"
   );
   for (const v of dataVulns) {
-    switch (v.severity) {
-      case "critical":
-        score -= 35;
-        break;
-      case "high":
-        score -= 20;
-        break;
-      case "medium":
-        score -= 12;
-        break;
-      default:
-        score -= 5;
-    }
+    score -= v.severity === "critical" ? 40 : v.severity === "high" ? 20 : 12;
   }
   return Math.max(0, score);
 }
 
-function scoreErrorHandling(ctx: ScoringContext): number {
-  // Without actually calling tools, we estimate based on schema quality
-  let score = 80; // default good since we can't easily test this statically
-  const hasAnyVuln = ctx.vulnerabilities.length > 0;
-  if (!hasAnyVuln) score = 100;
-  return score;
+function scoreToolIntegrity(ctx: ScoringContext): number {
+  let score = 100;
+  const integrityVulns = ctx.vulnerabilities.filter(
+    (v) => v.category === "Tool Shadowing"
+  );
+  for (const v of integrityVulns) {
+    score -= v.severity === "high" ? 25 : v.severity === "medium" ? 15 : 10;
+  }
+  return Math.max(0, score);
 }
 
 function scorePolicyCompliance(ctx: ScoringContext): number {
@@ -127,10 +104,10 @@ function scorePolicyCompliance(ctx: ScoringContext): number {
   );
 
   const coveredTools = new Set([...coveredByInvocation, ...coveredByData]);
-  const ratio = coveredTools.size / ctx.tools.length;
-
-  return Math.round(ratio * 100);
+  return Math.round((coveredTools.size / ctx.tools.length) * 100);
 }
+
+// ─── Grade ──────────────────────────────────────────────────────────────────
 
 function computeGrade(score: number): TrustScoreResult["grade"] {
   if (score >= 95) return "A+";
@@ -141,40 +118,47 @@ function computeGrade(score: number): TrustScoreResult["grade"] {
   return "F";
 }
 
+// ─── Recommendations ────────────────────────────────────────────────────────
+
 function generateRecommendations(
   ctx: ScoringContext,
   breakdown: TrustScoreResult["breakdown"]
 ): string[] {
   const recs: string[] = [];
 
+  if (ctx.vulnerabilities.some((v) => v.category === "Lethal Trifecta")) {
+    recs.push(
+      "CRITICAL: Lethal Trifecta detected — apply 'block_when_context_is_untrusted' on external comms tools and 'sanitize_with_dual_llm' on untrusted content tools to break the exfiltration chain"
+    );
+  }
   if (breakdown.toolDescriptionSafety < 70) {
     recs.push(
-      "CRITICAL: Review all tool descriptions for hidden instructions or prompt injection patterns"
+      "Review all tool descriptions and schemas for prompt injection, ANSI escapes, and hidden instructions"
     );
   }
   if (breakdown.inputValidation < 70) {
     recs.push(
-      "Add proper input validation with type constraints, maxLength, and patterns to all tool schemas"
+      "Add type constraints, maxLength, and pattern validation to all tool input schemas"
     );
   }
   if (breakdown.permissionScope < 70) {
     recs.push(
-      "Apply least-privilege principle: restrict tool access to only necessary resources"
+      "Restrict tool access to only necessary resources — apply least-privilege via Archestra policies"
     );
   }
   if (breakdown.dataHandling < 70) {
     recs.push(
-      "Apply trusted data policies (sanitize_with_dual_llm) to tools that handle sensitive data"
+      "Apply 'sanitize_with_dual_llm' trusted data policies on tools that handle sensitive data or untrusted content"
+    );
+  }
+  if (breakdown.toolIntegrity < 80) {
+    recs.push(
+      "Resolve tool naming conflicts — use server-namespaced names to prevent tool shadowing"
     );
   }
   if (breakdown.policyCompliance < 50) {
     recs.push(
-      "Configure Archestra security policies for all tools. Use generate_policy to auto-create recommended policies."
-    );
-  }
-  if (ctx.vulnerabilities.some((v) => v.category === "Tool Poisoning")) {
-    recs.push(
-      "Resolve tool naming conflicts to prevent tool shadowing attacks"
+      "Configure Archestra security policies for all tools — use generate_policy to auto-create them"
     );
   }
 
@@ -185,28 +169,37 @@ function generateRecommendations(
   return recs;
 }
 
+// ─── Main Calculator ────────────────────────────────────────────────────────
+
 export function calculateTrustScore(ctx: ScoringContext): TrustScoreResult {
   const breakdown = {
     toolDescriptionSafety: scoreToolDescriptionSafety(ctx),
     inputValidation: scoreInputValidation(ctx),
     permissionScope: scorePermissionScope(ctx),
     dataHandling: scoreDataHandling(ctx),
-    errorHandling: scoreErrorHandling(ctx),
+    toolIntegrity: scoreToolIntegrity(ctx),
     policyCompliance: scorePolicyCompliance(ctx),
   };
 
-  // Weighted average
-  const overallScore = Math.round(
+  // Weighted by security impact
+  let overallScore = Math.round(
     breakdown.toolDescriptionSafety * 0.25 +
-      breakdown.inputValidation * 0.2 +
+      breakdown.inputValidation * 0.15 +
       breakdown.permissionScope * 0.2 +
       breakdown.dataHandling * 0.15 +
-      breakdown.errorHandling * 0.1 +
-      breakdown.policyCompliance * 0.1
+      breakdown.toolIntegrity * 0.1 +
+      breakdown.policyCompliance * 0.15
   );
 
-  const serverName =
-    ctx.tools[0]?.serverName ?? "unknown";
+  // Any critical vulnerability caps the grade at D
+  const hasCritical = ctx.vulnerabilities.some(
+    (v) => v.severity === "critical"
+  );
+  if (hasCritical) {
+    overallScore = Math.min(overallScore, 40);
+  }
+
+  const serverName = ctx.tools[0]?.serverName ?? "unknown";
 
   return {
     serverName,

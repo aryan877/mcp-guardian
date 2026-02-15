@@ -8,6 +8,7 @@ import { log, LogLevel } from "../common/logger.js";
 import {
   analyzeToolVulnerabilities,
   calculateBasicTrustScore,
+  detectLethalTrifecta,
 } from "../analysis/vulnerability-patterns.js";
 import { analyzeWithLlm } from "../analysis/prompt-injection.js";
 import type { McpTool } from "../archestra/types.js";
@@ -75,6 +76,9 @@ export async function scanServer(
     const vulns = analyzeToolVulnerabilities(tool, tools);
     allVulnerabilities.push(...vulns);
   }
+
+  // Cross-tool analysis: Lethal Trifecta detection
+  allVulnerabilities.push(...detectLethalTrifecta(tools));
 
   // Deep scan: LLM-based analysis
   if (deep) {

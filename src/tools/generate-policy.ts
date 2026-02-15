@@ -97,6 +97,50 @@ function mapVulnerabilityToPolicy(
         });
       }
       break;
+
+    case "ANSI/Steganography Attack":
+      policies.push({
+        type: "tool_invocation",
+        toolName: vuln.tool,
+        toolId,
+        action: "block_always",
+        reason: `Hidden content attack: ${vuln.description}`,
+      });
+      break;
+
+    case "Path Traversal":
+      policies.push({
+        type: "tool_invocation",
+        toolName: vuln.tool,
+        toolId,
+        action: mode === "permissive" ? "block_when_context_is_untrusted" : "block_always",
+        reason: `Path traversal risk: ${vuln.description}`,
+      });
+      break;
+
+    case "Tool Shadowing":
+      if (mode !== "permissive") {
+        policies.push({
+          type: "tool_invocation",
+          toolName: vuln.tool,
+          toolId,
+          action: "block_when_context_is_untrusted",
+          reason: `Tool shadowing risk: ${vuln.description}`,
+        });
+      }
+      break;
+
+    case "Lethal Trifecta":
+      // For the trifecta, we generate policies for individual tools involved
+      // The vuln.tool field contains "toolA + toolB + toolC"
+      policies.push({
+        type: "tool_invocation",
+        toolName: vuln.tool,
+        toolId,
+        action: "block_when_context_is_untrusted",
+        reason: `Lethal Trifecta: ${vuln.description}`,
+      });
+      break;
   }
 
   return policies;

@@ -27,7 +27,7 @@ interface TrustScoreResult {
     inputValidation: number;
     permissionScope: number;
     dataHandling: number;
-    errorHandling: number;
+    toolIntegrity: number;
     policyCompliance: number;
   };
   grade: string;
@@ -35,12 +35,12 @@ interface TrustScoreResult {
 }
 
 const dimensionConfig = [
-  { key: "toolDescriptionSafety", label: "Description Safety", weight: "25%", icon: FileText, desc: "Are tool descriptions free from prompt injection?" },
-  { key: "inputValidation", label: "Input Validation", weight: "20%", icon: Shield, desc: "Do tools validate and sanitize inputs?" },
-  { key: "permissionScope", label: "Permission Scope", weight: "20%", icon: Lock, desc: "Are permissions minimal and well-scoped?" },
-  { key: "dataHandling", label: "Data Handling", weight: "15%", icon: Eye, desc: "Is sensitive data handled safely?" },
-  { key: "errorHandling", label: "Error Handling", weight: "10%", icon: AlertCircle, desc: "Are errors handled without leaking info?" },
-  { key: "policyCompliance", label: "Policy Compliance", weight: "10%", icon: CheckCircle2, desc: "Are Archestra policies configured?" },
+  { key: "toolDescriptionSafety", label: "Description Safety", weight: "25%", icon: FileText, desc: "Prompt injection, ANSI escapes, hidden instructions" },
+  { key: "permissionScope", label: "Permission Scope", weight: "20%", icon: Lock, desc: "Least-privilege, command injection, path traversal" },
+  { key: "inputValidation", label: "Input Validation", weight: "15%", icon: Shield, desc: "Schema constraints, type checking, boundaries" },
+  { key: "dataHandling", label: "Data Handling", weight: "15%", icon: Eye, desc: "Lethal Trifecta, PII exposure, exfiltration risk" },
+  { key: "policyCompliance", label: "Policy Compliance", weight: "15%", icon: CheckCircle2, desc: "Archestra tool invocation & trusted data policies" },
+  { key: "toolIntegrity", label: "Tool Integrity", weight: "10%", icon: AlertCircle, desc: "Tool shadowing, name collisions, supply chain" },
 ];
 
 function getGrade(score: number): { letter: string; class: string } {
