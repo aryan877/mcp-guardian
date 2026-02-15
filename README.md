@@ -403,6 +403,8 @@ A dedicated Next.js security dashboard with 6 pages:
 | **Monitor** | Real-time anomaly detection with auto-refresh and alert severity |
 | **Reports** | Full audit reports with executive summary and downloadable output |
 
+The dashboard talks to Guardian's MCP endpoint directly via JSON-RPC 2.0. In production, Archestra is the secure gateway for all MCP traffic &mdash; the dashboard exposes Guardian over MCP purely for demo purposes.
+
 Built with Next.js 16, React 19, Tailwind CSS 4, shadcn/ui, Radix UI, Space Mono font, dark theme with yellow (#FFE500) accent.
 
 ---
