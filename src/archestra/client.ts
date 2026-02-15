@@ -71,7 +71,7 @@ export class ArchestraClient {
   // --- tool invocation policies (block/allow rules) ---
 
   async listToolInvocationPolicies(): Promise<ToolInvocationPolicy[]> {
-    const { data } = await this.http.get("/api/tool-invocation");
+    const { data } = await this.http.get("/api/autonomy-policies/tool-invocation");
     return data;
   }
 
@@ -82,7 +82,7 @@ export class ArchestraClient {
       toolId: policy.toolId,
       action: policy.action,
     });
-    const { data } = await this.http.post("/api/tool-invocation", policy);
+    const { data } = await this.http.post("/api/autonomy-policies/tool-invocation", policy);
     return data;
   }
 
@@ -90,12 +90,12 @@ export class ArchestraClient {
     id: string,
     policy: Partial<ToolInvocationPolicy>
   ): Promise<ToolInvocationPolicy> {
-    const { data } = await this.http.put(`/api/tool-invocation/${id}`, policy);
+    const { data } = await this.http.put(`/api/autonomy-policies/tool-invocation/${id}`, policy);
     return data;
   }
 
   async deleteToolInvocationPolicy(id: string): Promise<void> {
-    await this.http.delete(`/api/tool-invocation/${id}`);
+    await this.http.delete(`/api/autonomy-policies/tool-invocation/${id}`);
   }
 
   // --- trusted data policies (sanitize/quarantine rules) ---
