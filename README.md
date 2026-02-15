@@ -247,7 +247,8 @@ Everything runs in one Docker container. Archestra manages an embedded K8s clust
 Guardian never connects to other MCP servers directly. It reads their metadata through Archestra's REST API:
 
 ```typescript
-// read tool definitions from Archestra
+// read tool definitions from Archestra (fuzzy name matching —
+// "malicious demo server" resolves to "malicious-demo")
 const server = await client.findServer("malicious-demo");
 const tools = await client.getServerTools(server.id);
 
@@ -357,9 +358,20 @@ resource "archestra_mcp_server_installation" "guardian" {
 resource "archestra_profile" "guardian_agent" {
   name = "Guardian Security Agent"
 }
+
+# Guardian tools must work in untrusted context — scan results
+# contain malicious tool descriptions that taint the conversation
+resource "archestra_profile_tool" "scan_server" {
+  profile_id                                 = archestra_profile.guardian_agent.id
+  tool_id                                    = data.archestra_mcp_server_tool.scan_server.id
+  allow_usage_when_untrusted_data_is_present = true
+  tool_result_treatment                      = "untrusted"
+}
 ```
 
-One `terraform apply` creates catalog items, server installations, an agent profile, 6 tool assignments, and a security team.
+One `terraform apply` creates catalog items, server installations, an agent profile, 6 tool assignments (all with `allow_usage_when_untrusted_data_is_present = true`), and a security team.
+
+> **Note**: The Archestra Terraform provider has a known read-back bug with `allow_usage_when_untrusted_data_is_present` and `tool_result_treatment` — values are applied correctly server-side but read back as defaults. Use `lifecycle { ignore_changes }` to suppress the errors after the initial apply.
 
 ---
 
