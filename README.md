@@ -35,14 +35,16 @@
 
 | Service | URL |
 |---------|-----|
-| **Archestra UI** (chat with Guardian) | [guardian.aryankumar.dev](https://guardian.aryankumar.dev) |
-| **Archestra API** | [guardian-api.aryankumar.dev](https://guardian-api.aryankumar.dev) |
+| **Guardian Dashboard** | [guardian-app.aryankumar.dev](https://guardian-app.aryankumar.dev) |
+| **Archestra UI** (chat with Guardian agent) | [guardian.aryankumar.dev](https://guardian.aryankumar.dev) |
 
-Sign in with `admin@example.com` / `password`, select the **Guardian Security Agent** profile, and try:
+**Chat demo**: Sign in to the Archestra UI with `admin@example.com` / `password`, select the **Guardian Security Agent** profile, and try:
 
 ```
 Scan the malicious-demo server with deep analysis
 ```
+
+**Dashboard demo**: Open the Guardian Dashboard to see scan results, trust scores, policy engine, and real-time monitoring in a dedicated security UI.
 
 ---
 
@@ -266,7 +268,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3001` for the Guardian security dashboard.
+Open `http://localhost:3001` for the Guardian security dashboard, or visit the hosted version at [guardian-app.aryankumar.dev](https://guardian-app.aryankumar.dev).
 
 ---
 
@@ -379,6 +381,8 @@ Full config includes catalog items, installations, agent profile, 6 tool assignm
 ---
 
 ## Dashboard
+
+> **Live**: [guardian-app.aryankumar.dev](https://guardian-app.aryankumar.dev)
 
 A dedicated Next.js security dashboard with 6 pages:
 
