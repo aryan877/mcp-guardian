@@ -180,40 +180,79 @@ export async function generatePolicy(
     }
   }
 
-  const appliedPolicies = [];
-  for (const rec of recommendations) {
-    let applied = false;
+  // Deduplicate: keep the strongest action per (toolId, type) pair.
+  const invocationStrength: Record<string, number> = {
+    block_always: 3,
+    block_when_context_is_untrusted: 2,
+    allow_when_context_is_untrusted: 1,
+  };
+  const trustedDataStrength: Record<string, number> = {
+    block_always: 4,
+    sanitize_with_dual_llm: 3,
+    mark_as_untrusted: 2,
+    mark_as_trusted: 1,
+  };
 
-    if (!dryRun) {
+  const bestByTool = new Map<string, PolicyRecommendation>();
+  for (const rec of recommendations) {
+    const key = `${rec.toolId}:${rec.type}`;
+    const existing = bestByTool.get(key);
+    const strengths = rec.type === "tool_invocation" ? invocationStrength : trustedDataStrength;
+    if (!existing || (strengths[rec.action] ?? 0) > (strengths[existing.action] ?? 0)) {
+      bestByTool.set(key, rec);
+    }
+  }
+  const deduped = Array.from(bestByTool.values());
+
+  // Apply using bulk upsert endpoints (creates or updates, no duplicates)
+  let allApplied = true;
+  if (!dryRun) {
+    // Group tool_invocation recs by action
+    const invocationByAction = new Map<string, string[]>();
+    for (const rec of deduped.filter((r) => r.type === "tool_invocation")) {
+      const ids = invocationByAction.get(rec.action) || [];
+      ids.push(rec.toolId);
+      invocationByAction.set(rec.action, ids);
+    }
+    for (const [action, toolIds] of invocationByAction) {
       try {
-        if (rec.type === "tool_invocation") {
-          await client.createToolInvocationPolicy({
-            toolId: rec.toolId,
-            action: rec.action as any,
-          });
-        } else {
-          await client.createTrustedDataPolicy({
-            toolId: rec.toolId,
-            action: rec.action as any,
-          });
-        }
-        applied = true;
-        log(LogLevel.INFO, `Applied policy: ${rec.type} ${rec.action} on ${rec.toolName}`);
+        await client.bulkSetToolInvocationDefault(toolIds, action as any);
+        log(LogLevel.INFO, `Bulk applied tool invocation ${action} to ${toolIds.length} tools`);
       } catch (error) {
-        log(LogLevel.ERROR, `Failed to apply policy for ${rec.toolName}`, {
+        allApplied = false;
+        log(LogLevel.ERROR, `Failed to bulk apply tool invocation ${action}`, {
           error: error instanceof Error ? error.message : String(error),
         });
       }
     }
 
-    appliedPolicies.push({
-      type: rec.type,
-      toolName: rec.toolName,
-      action: rec.action,
-      reason: rec.reason,
-      applied,
-    });
+    // Group trusted_data recs by action
+    const trustedByAction = new Map<string, string[]>();
+    for (const rec of deduped.filter((r) => r.type === "trusted_data")) {
+      const ids = trustedByAction.get(rec.action) || [];
+      ids.push(rec.toolId);
+      trustedByAction.set(rec.action, ids);
+    }
+    for (const [action, toolIds] of trustedByAction) {
+      try {
+        await client.bulkSetTrustedDataDefault(toolIds, action as any);
+        log(LogLevel.INFO, `Bulk applied trusted data ${action} to ${toolIds.length} tools`);
+      } catch (error) {
+        allApplied = false;
+        log(LogLevel.ERROR, `Failed to bulk apply trusted data ${action}`, {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
   }
+
+  const appliedPolicies = deduped.map((rec) => ({
+    type: rec.type,
+    toolName: rec.toolName,
+    action: rec.action,
+    reason: rec.reason,
+    applied: !dryRun && allApplied,
+  }));
 
   return {
     serverName,
