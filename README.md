@@ -491,7 +491,7 @@ mcp-guardian/
 
 <p align="center">
   <b>Solo submission</b> by <a href="https://github.com/aryan877">Aryan Kumar</a> for the
-  <a href="https://wemakedevs.org/events/hackathons/2-fast-2-mcp">2 Fast 2 MCP</a> hackathon
+  <a href="https://www.wemakedevs.org/hackathons/2fast2mcp">2 Fast 2 MCP</a> hackathon
 </p>
 
 <p align="center">
