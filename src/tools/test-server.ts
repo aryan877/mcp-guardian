@@ -16,28 +16,18 @@ export async function testServer(
 
   const client = getClient();
 
-  // Get server and tools
   const servers = await client.listServers();
   const server = servers.find(
-    (s) => s.name.toLowerCase() === serverName.toLowerCase()
+    (s) =>
+      s.catalogName?.toLowerCase() === serverName.toLowerCase() ||
+      s.name.toLowerCase() === serverName.toLowerCase()
   );
   if (!server) throw new ServerNotFoundError(serverName);
 
-  // Collect tools
-  const agents = await client.listAgents();
-  let tools: McpTool[] = [];
-  for (const agent of agents) {
-    try {
-      const agentTools = await client.getAgentTools(agent.id);
-      tools.push(
-        ...agentTools
-          .filter((t) => t.serverId === server.id || t.serverName === serverName)
-          .map((t) => ({ ...t, serverName }))
-      );
-    } catch {
-      // skip
-    }
-  }
+  let tools: McpTool[] = (await client.getServerTools(server.id)).map((t) => ({
+    ...t,
+    serverName,
+  }));
 
   // Filter to specific tool if requested
   if (toolName) {

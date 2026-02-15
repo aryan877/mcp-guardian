@@ -26,6 +26,18 @@ variable "malicious_demo_docker_image" {
   default     = "malicious-demo:latest"
 }
 
+variable "archestra_internal_url" {
+  description = "Archestra API URL reachable from inside K8s pods"
+  type        = string
+  default     = "http://172.25.0.3:9000"
+}
+
+variable "archestra_api_key" {
+  description = "API key for Guardian to call Archestra API (set via TF_VAR_archestra_api_key)"
+  type        = string
+  sensitive   = true
+}
+
 # ─── MCP Guardian ────────────────────────────────────────────────────────────
 
 resource "archestra_mcp_registry_catalog_item" "guardian" {
@@ -42,9 +54,10 @@ resource "archestra_mcp_registry_catalog_item" "guardian" {
     http_path      = "/mcp"
 
     environment = {
-      TRANSPORT         = "sse"
-      PORT              = "8080"
-      ARCHESTRA_API_URL = "http://archestra-platform:9000"
+      TRANSPORT          = "sse"
+      PORT               = "8080"
+      ARCHESTRA_API_URL  = var.archestra_internal_url
+      ARCHESTRA_API_KEY  = var.archestra_api_key
     }
   }
 }

@@ -19,12 +19,13 @@ export class ArchestraClient {
     baseUrl: string = process.env.ARCHESTRA_API_URL || "http://localhost:9000",
     token?: string
   ) {
+    const apiKey = token || process.env.ARCHESTRA_API_KEY;
     this.http = axios.create({
       baseURL: baseUrl,
       timeout: 30000,
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(apiKey ? { Authorization: apiKey } : {}),
       },
     });
 
@@ -52,11 +53,16 @@ export class ArchestraClient {
     return data;
   }
 
+  async getServerTools(serverId: string): Promise<McpTool[]> {
+    const { data } = await this.http.get(`/api/mcp_server/${serverId}/tools`);
+    return data;
+  }
+
   // ─── Agents / Profiles ─────────────────────────────────────────
 
   async listAgents(): Promise<Agent[]> {
     const { data } = await this.http.get("/api/agents");
-    return data;
+    return Array.isArray(data) ? data : data.data ?? [];
   }
 
   async getAgent(id: string): Promise<Agent> {

@@ -16,48 +16,19 @@ import type { McpTool } from "../archestra/types.js";
 async function getServerTools(serverName: string): Promise<McpTool[]> {
   const client = getClient();
 
-  // List all servers, find the one matching the name
   const servers = await client.listServers();
   const server = servers.find(
-    (s) => s.name.toLowerCase() === serverName.toLowerCase()
+    (s) =>
+      s.catalogName?.toLowerCase() === serverName.toLowerCase() ||
+      s.name.toLowerCase() === serverName.toLowerCase()
   );
 
   if (!server) {
     throw new ServerNotFoundError(serverName);
   }
 
-  // Get agents and find tools associated with this server
-  const agents = await client.listAgents();
-  const allTools: McpTool[] = [];
-
-  for (const agent of agents) {
-    try {
-      const tools = await client.getAgentTools(agent.id);
-      const serverTools = tools
-        .filter((t) => t.serverId === server.id || t.serverName === serverName)
-        .map((t) => ({ ...t, serverName }));
-      allTools.push(...serverTools);
-    } catch {
-      // Agent might not have tools, skip
-    }
-  }
-
-  // If we didn't find tools through agents, the tools might be at the server level
-  // Try getting all tools from all agents (some APIs return tools with server metadata)
-  if (allTools.length === 0) {
-    for (const agent of agents) {
-      try {
-        const tools = await client.getAgentTools(agent.id);
-        for (const tool of tools) {
-          allTools.push({ ...tool, serverName: tool.serverName || serverName });
-        }
-      } catch {
-        // skip
-      }
-    }
-  }
-
-  return allTools;
+  const tools = await client.getServerTools(server.id);
+  return tools.map((t) => ({ ...t, serverName }));
 }
 
 export async function scanServer(

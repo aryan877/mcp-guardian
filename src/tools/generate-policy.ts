@@ -158,19 +158,19 @@ export async function generatePolicy(
   // First, scan the server
   const scanResult = await scanServer({ serverName, deep: false });
 
-  // Get tool IDs from agents
   const client = getClient();
-  const agents = await client.listAgents();
-  const toolIdMap = new Map<string, string>(); // toolName -> toolId
+  const servers = await client.listServers();
+  const server = servers.find(
+    (s) =>
+      s.catalogName?.toLowerCase() === serverName.toLowerCase() ||
+      s.name.toLowerCase() === serverName.toLowerCase()
+  );
 
-  for (const agent of agents) {
-    try {
-      const tools = await client.getAgentTools(agent.id);
-      for (const tool of tools) {
-        toolIdMap.set(tool.name, tool.id);
-      }
-    } catch {
-      // skip
+  const toolIdMap = new Map<string, string>();
+  if (server) {
+    const tools = await client.getServerTools(server.id);
+    for (const tool of tools) {
+      toolIdMap.set(tool.name, tool.id);
     }
   }
 

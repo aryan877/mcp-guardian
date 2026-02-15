@@ -20,28 +20,17 @@ export async function trustScore(
   // Get scan results
   const scanResult = await scanServer({ serverName, deep: false });
 
-  // Get server tools
   const servers = await client.listServers();
   const server = servers.find(
-    (s) => s.name.toLowerCase() === serverName.toLowerCase()
+    (s) =>
+      s.catalogName?.toLowerCase() === serverName.toLowerCase() ||
+      s.name.toLowerCase() === serverName.toLowerCase()
   );
   if (!server) throw new ServerNotFoundError(serverName);
 
-  // Collect tools
-  const agents = await client.listAgents();
-  const tools: McpTool[] = [];
-  for (const agent of agents) {
-    try {
-      const agentTools = await client.getAgentTools(agent.id);
-      tools.push(
-        ...agentTools
-          .filter((t) => t.serverId === server.id || t.serverName === serverName)
-          .map((t) => ({ ...t, serverName }))
-      );
-    } catch {
-      // skip
-    }
-  }
+  const tools: McpTool[] = (await client.getServerTools(server.id)).map(
+    (t) => ({ ...t, serverName })
+  );
 
   // Get existing policies
   const [toolInvocationPolicies, trustedDataPolicies] = await Promise.all([

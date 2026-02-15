@@ -1,8 +1,10 @@
 export interface McpServer {
   id: string;
   name: string;
+  catalogName?: string;
   description?: string;
   status?: string;
+  localInstallationStatus?: string;
   createdAt?: string;
   updatedAt?: string;
   config?: Record<string, unknown>;
