@@ -28,10 +28,9 @@ export function Sidebar() {
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-[260px] flex-col border-r border-border bg-[#0F0F0F]">
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-6 border-b border-border">
-        <div className="relative flex items-center justify-center w-9 h-9 rounded-lg overflow-hidden">
+        <div className="flex items-center justify-center w-9 h-9 rounded-lg overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/guardian-logo.png" alt="MCP Guardian" width="36" height="36" className="rounded-lg" />
-          <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-guardian-green animate-pulse" />
         </div>
         <div>
           <h1 className="text-sm font-bold tracking-wider text-foreground">
@@ -63,9 +62,6 @@ export function Sidebar() {
                 }`}
               />
               <span className="tracking-wide">{item.label}</span>
-              {isActive && (
-                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary animate-pulse-ring" />
-              )}
             </Link>
           );
         })}
@@ -74,7 +70,7 @@ export function Sidebar() {
       {/* Footer */}
       <div className="px-4 py-4 border-t border-border">
         <a
-          href="http://localhost:3000"
+          href="https://guardian.aryankumar.dev"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors"

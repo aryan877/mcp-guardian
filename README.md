@@ -38,13 +38,19 @@
 | **Guardian Dashboard** | [guardian-app.aryankumar.dev](https://guardian-app.aryankumar.dev) |
 | **Archestra UI** (chat with Guardian agent) | [guardian.aryankumar.dev](https://guardian.aryankumar.dev) |
 
-**Chat demo**: Sign in to the Archestra UI with `admin@example.com` / `password`, select the **Guardian Security Agent** profile, and try:
+**Chat demo**: Sign in to the Archestra UI, select the **Guardian Security Agent** profile, and try:
 
 ```
 Scan the malicious-demo server with deep analysis
 ```
 
-**Dashboard demo**: Open the Guardian Dashboard to see scan results, trust scores, policy engine, and real-time monitoring in a dedicated security UI.
+Then apply policies:
+
+```
+Generate strict policies for malicious-demo and apply them
+```
+
+**Dashboard demo**: Open the Guardian Dashboard to scan servers, generate policies, view trust scores, and run security tests.
 
 ---
 
@@ -129,8 +135,8 @@ Guardian → scan_server("malicious-demo", deep: true)
 
 ┌─────────────────────────────────────────────────┐
 │  SCAN RESULTS: malicious-demo                    │
-│  Trust Score: 12/100 (Grade: F)                  │
-│  7 tools scanned, 11 vulnerabilities found       │
+│  Trust Score: 0/100 (Grade: F)                   │
+│  7 tools scanned, 19 vulnerabilities found       │
 ├─────────────────────────────────────────────────┤
 │  ❌ CRITICAL  Prompt injection in read_file      │
 │  ❌ CRITICAL  Command injection in execute       │
@@ -264,6 +270,8 @@ Scan the malicious-demo server with deep analysis
 
 ```bash
 cd dashboard
+cp .env.example .env.local
+# Edit .env.local to set NEXT_PUBLIC_GUARDIAN_URL to your Guardian endpoint
 npm install
 npm run dev
 ```

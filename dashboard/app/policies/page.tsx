@@ -116,11 +116,20 @@ export default function PoliciesPage() {
 
       const res = await fetch(`${GUARDIAN_URL}/mcp`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json, text/event-stream",
+        },
         body: JSON.stringify(jsonRpc),
       });
 
-      const rpcResponse = await res.json();
+      const text = await res.text();
+      const dataLine = text
+        .split("\n")
+        .find((line) => line.startsWith("data: "));
+      const rpcResponse = dataLine
+        ? JSON.parse(dataLine.slice(6))
+        : JSON.parse(text);
       if (rpcResponse.result?.content?.[0]?.text) {
         setResult(JSON.parse(rpcResponse.result.content[0].text));
       }
