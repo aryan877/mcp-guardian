@@ -29,7 +29,7 @@ variable "malicious_demo_docker_image" {
 variable "archestra_internal_url" {
   description = "Archestra API URL reachable from inside K8s pods"
   type        = string
-  default     = "http://172.25.0.3:9000"
+  default     = "http://172.18.0.3:9000"
 }
 
 variable "archestra_api_key" {
