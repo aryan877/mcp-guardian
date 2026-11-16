@@ -30,11 +30,7 @@
 
 ## Try It
 
-> No setup needed. Open, sign in, chat.
-
-| | |
-|---|---|
-| **Archestra UI** | [guardian.aryankumar.dev](https://guardian.aryankumar.dev) |
+> Start Archestra and Guardian with the [Quick Start](#quick-start), open the Archestra UI, and sign in.
 
 Select the **Guardian Security Agent** profile and type:
 
